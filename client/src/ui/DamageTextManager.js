@@ -6,86 +6,62 @@ export default class DamageTextManager {
         this.pool = [];
     }
 
-    /**
-     * Spawns a floating damage number.
-     * @param {number} x - World X position.
-     * @param {number} y - World Y position.
-     * @param {number|string} amount - The damage amount to display.
-     * @param {boolean} isCritical - Whether to style as a critical hit.
-     */
-    show(x, y, amount, isCritical = false) {
-        let text = this.getPooledText();
+    show(x, y, damage, isCrit) {
+        let textObj = this.pool.find(t => !t.active);
 
-        // Reset properties
-        text.setPosition(x, y);
-        text.setText(amount.toString());
-        text.setScale(0.5);
-        text.setAlpha(1);
-        text.setVisible(true);
-        text.active = true;
+        if (!textObj) {
+            textObj = this.scene.add.text(0, 0, '', {
+                fontFamily: '"Arial Black", "Arial", sans-serif',
+                fontStyle: 'bold',
+                stroke: '#000000',
+                strokeThickness: 4,
+                shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 0, stroke: true, fill: true }
+            }).setOrigin(0.5);
+            textObj.setDepth(2000); // Above UI if possible, or below? Usually below HUD but above units.
+            this.pool.push(textObj);
+        }
 
-        // Styling (MapleStory "Vibe")
-        // Standard: Orange/Yellow gradient style
-        // Critical: Red/Purple or larger
-        const color = isCritical ? '#ff0000' : '#ffaa00';
-        const stroke = '#ffffff';
-        const fontSize = isCritical ? '32px' : '24px';
+        textObj.setActive(true);
+        textObj.setVisible(true);
+        textObj.setPosition(x, y - 40); // Spawn a bit higher
+        textObj.setText(damage.toString());
+        textObj.setAlpha(1);
+        textObj.setScale(0.5); // Start small for pop
 
-        text.setStyle({
-            fontFamily: '"Arial Black", "Arial", sans-serif',
-            fontSize: fontSize,
-            color: color,
-            stroke: stroke,
-            strokeThickness: 4,
-            shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 0, stroke: true, fill: true }
+        // Style based on Crit
+        if (isCrit) {
+            textObj.setFontSize(32);
+            textObj.setFill('#ff0000'); // Red
+            textObj.setStroke('#ffffff', 4); // White outline for crit
+        } else {
+            textObj.setFontSize(24);
+            textObj.setFill('#ffcc00'); // Orange/Yellow
+            textObj.setStroke('#000000', 3);
+        }
+
+        // Animation: "Pop" up and float
+        // MapleStyle: Pops up aggressively, then drifts up and fades.
+
+        // 1. Pop Scale
+        this.scene.tweens.add({
+            targets: textObj,
+            scale: 1.0,
+            duration: 150,
+            ease: 'Back.out'
         });
 
-        // Animation: Pop up and float
+        // 2. Float Up and Fade
         this.scene.tweens.add({
-            targets: text,
-            y: y - 80, // Float up
-            scale: { from: 0.5, to: 1.2 }, // Pop effect
+            targets: textObj,
+            y: y - 100, // Float up
+            alpha: 0,
             duration: 800,
-            ease: 'Back.out', // Bouncy pop
+            delay: 100, // Sustain briefly
+            ease: 'Quad.out',
             onComplete: () => {
-                // Fade out phase
-                this.scene.tweens.add({
-                    targets: text,
-                    alpha: 0,
-                    y: y - 100,
-                    duration: 300,
-                    onComplete: () => {
-                        this.returnToPool(text);
-                    }
-                });
+                textObj.setActive(false);
+                textObj.setVisible(false);
             }
         });
-
-        // Secondary scale bounce for "impact" feel
-        this.scene.tweens.add({
-            targets: text,
-            scale: isCritical ? 1.5 : 1.0,
-            duration: 150,
-            yoyo: true,
-            repeat: 0,
-            ease: 'Sine.inOut'
-        });
-    }
-
-    getPooledText() {
-        if (this.pool.length > 0) {
-            return this.pool.pop();
-        }
-        // Create new text object if pool is empty
-        const text = this.scene.add.text(0, 0, '', {});
-        text.setDepth(100); // Ensure it's above other game objects
-        text.setOrigin(0.5, 0.5);
-        return text;
-    }
-
-    returnToPool(text) {
-        text.setVisible(false);
-        text.active = false;
-        this.pool.push(text);
     }
 }

@@ -7,72 +7,77 @@ export default class UIManager {
     }
 
     createHUD() {
-        // Container for UI elements (fixed to camera)
+        // Container for UI (Fixed to camera)
         this.container = this.scene.add.container(0, 0);
         this.container.setScrollFactor(0);
-        this.container.setDepth(1000); // Top layer
+        this.container.setDepth(1000);
 
         const width = this.scene.scale.width;
         const height = this.scene.scale.height;
 
-        // Bottom Bar Background (Gray/Black)
-        const barHeight = 60;
-        const bg = this.scene.add.rectangle(width / 2, height - barHeight / 2, width, barHeight, 0x333333);
-        bg.setAlpha(0.8);
-        this.container.add(bg);
+        // 1. HUD Background (The Base Image)
+        // Image is wide. Let's place it at bottom center.
+        const hudBg = this.scene.add.image(width / 2, height, 'hud_base');
+        hudBg.setOrigin(0.5, 1); // Anchor bottom-center
+        // Scale it? If image is 1920 but game is 800 width, we might need to scale or slice.
+        // Assuming generated image is roughly wide format.
+        // Let's force width to match screen (stretch) or keeping aspect ratio.
+        // For now, let's just place it.
+        // hudBg.setDisplaySize(width, 100); // Standard height?
+        this.container.add(hudBg);
 
-        // HP Bar (Red)
-        // Label
-        const hpLabel = this.scene.add.text(20, height - 45, 'HP', { fontSize: '16px', fill: '#ffffff', fontStyle: 'bold' });
-        this.container.add(hpLabel);
+        // 2. Character Info (Left Side)
+        // Avatar Placeholder (Square)
+        // Position relative to HUD Bottom-Left (approx)
+        const leftBaseX = 20;
+        const bottomY = height - 80;
 
-        // Bar Background
-        const hpBg = this.scene.add.rectangle(50, height - 35, 200, 20, 0x000000).setOrigin(0, 0.5);
-        this.container.add(hpBg);
+        // Level (Gold/Yellow text)
+        this.levelText = this.scene.add.text(leftBaseX + 60, bottomY + 20, 'Lv. 1', {
+            fontSize: '14px', fill: '#FFCC00', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
+        });
+        this.container.add(this.levelText);
 
-        // Bar Fill
-        this.hpBar = this.scene.add.rectangle(50, height - 35, 200, 20, 0xff0000).setOrigin(0, 0.5);
-        this.container.add(this.hpBar);
+        // Name (White)
+        this.nameText = this.scene.add.text(leftBaseX + 60, bottomY + 40, 'Mapler', {
+            fontSize: '12px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2
+        });
+        this.container.add(this.nameText);
 
-        // HP Value
-        this.hpText = this.scene.add.text(150, height - 35, '1000/1000', { fontSize: '12px', fill: '#ffffff' }).setOrigin(0.5);
+        // HP/MP Bars (Bottom Center - Classic Style usually had HP MP side by side or stacked)
+        // Our generated image has a center bar. Let's use that for EXP.
+        // And place HP/MP above it or integrated.
+
+        // HP Bar (Red Gradient)
+        this.hpBarCtx = this.scene.add.graphics();
+        this.container.add(this.hpBarCtx);
+
+        // MP Bar (Blue Gradient)
+        this.mpBarCtx = this.scene.add.graphics();
+        this.container.add(this.mpBarCtx);
+
+        this.hpText = this.scene.add.text(width / 2 - 100, height - 75, 'HP 50/50', { fontSize: '12px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 });
+        this.mpText = this.scene.add.text(width / 2 + 50, height - 75, 'MP 10/10', { fontSize: '12px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 });
         this.container.add(this.hpText);
-
-
-        // MP Bar (Blue)
-        // Label
-        const mpLabel = this.scene.add.text(270, height - 45, 'MP', { fontSize: '16px', fill: '#ffffff', fontStyle: 'bold' });
-        this.container.add(mpLabel);
-
-        // Bar Background
-        const mpBg = this.scene.add.rectangle(300, height - 35, 200, 20, 0x000000).setOrigin(0, 0.5);
-        this.container.add(mpBg);
-
-        // Bar Fill
-        this.mpBar = this.scene.add.rectangle(300, height - 35, 200, 20, 0x0000ff).setOrigin(0, 0.5);
-        this.container.add(this.mpBar);
-
-        // MP Value
-        this.mpText = this.scene.add.text(400, height - 35, '500/500', { fontSize: '12px', fill: '#ffffff' }).setOrigin(0.5);
         this.container.add(this.mpText);
 
+        // 3. EXP Bar (Center Long Bar)
+        // Assume the "empty bar" in the image is at bottom-middle.
+        const expBarWidth = 400; // Estimated from image prompt
+        const expBarHeight = 15;
+        const expX = width / 2 - expBarWidth / 2;
+        const expY = height - 30; // Near bottom
 
-        // Quick Slot / Chat Placeholder
-        const chatBg = this.scene.add.rectangle(width - 150, height - 30, 280, 50, 0xffffff, 0.2).setOrigin(0.5);
-        const chatText = this.scene.add.text(width - 150, height - 35, '[All] Chat Log...', { fontSize: '12px', fill: '#cccc' }).setOrigin(0.5);
-        this.container.add(chatBg);
-        this.container.add(chatText);
-
-        // EXP Bar (Yellow) - Absolute Bottom
-        const expBg = this.scene.add.rectangle(width / 2, height - 5, width, 10, 0x444444).setOrigin(0.5);
+        // EXP Background (Dark)
+        const expBg = this.scene.add.rectangle(width / 2, expY, expBarWidth, expBarHeight, 0x111111).setOrigin(0.5);
         this.container.add(expBg);
 
-        this.expBar = this.scene.add.rectangle(0, height - 5, 0, 10, 0xffd700).setOrigin(0, 0.5); // Left-aligned
+        // EXP Fill (Gold/Green)
+        this.expBar = this.scene.add.rectangle(expX, expY, 0, expBarHeight, 0xDDDD00).setOrigin(0, 0.5); // Left-aligned
         this.container.add(this.expBar);
 
-        // Level Text
-        this.levelText = this.scene.add.text(40, height - 70, 'Lv.1', { fontSize: '18px', fill: '#ffffff', fontStyle: 'bold' });
-        this.container.add(this.levelText);
+        this.expText = this.scene.add.text(width / 2, expY, '0.00%', { fontSize: '10px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 }).setOrigin(0.5);
+        this.container.add(this.expText);
     }
 
     setupEventListeners(statManager) {
@@ -86,7 +91,7 @@ export default class UIManager {
         });
 
         statManager.on('levelUp', (level) => {
-            this.levelText.setText(`Lv.${level}`);
+            this.levelText.setText(`Lv. ${level}`);
             // Flash Effect?
         });
 
@@ -98,18 +103,35 @@ export default class UIManager {
 
     updateHP(current, max) {
         const percent = Phaser.Math.Clamp(current / max, 0, 1);
-        this.hpBar.width = 200 * percent;
-        this.hpText.setText(`${Math.floor(current)}/${max}`);
+
+        // Redraw HP Bar with gradient effect
+        this.hpBarCtx.clear();
+        this.hpBarCtx.fillStyle(0x333333, 0.8);
+        this.hpBarCtx.fillRect(this.scene.scale.width / 2 - 150, this.scene.scale.height - 90, 140, 15); // BG
+
+        this.hpBarCtx.fillStyle(0xFF0000, 1);
+        this.hpBarCtx.fillRect(this.scene.scale.width / 2 - 150, this.scene.scale.height - 90, 140 * percent, 15); // FG
+
+        this.hpText.setText(`HP ${Math.floor(current)}/${max}`);
     }
 
     updateMP(current, max) {
         const percent = Phaser.Math.Clamp(current / max, 0, 1);
-        this.mpBar.width = 200 * percent;
-        this.mpText.setText(`${Math.floor(current)}/${max}`);
+
+        this.mpBarCtx.clear();
+        this.mpBarCtx.fillStyle(0x333333, 0.8);
+        this.mpBarCtx.fillRect(this.scene.scale.width / 2 + 10, this.scene.scale.height - 90, 140, 15); // BG
+
+        this.mpBarCtx.fillStyle(0x0000FF, 1);
+        this.mpBarCtx.fillRect(this.scene.scale.width / 2 + 10, this.scene.scale.height - 90, 140 * percent, 15); // FG
+
+        this.mpText.setText(`MP ${Math.floor(current)}/${max}`);
     }
 
     updateEXP(current, max) {
         const percent = Phaser.Math.Clamp(current / max, 0, 1);
-        this.expBar.width = this.scene.scale.width * percent;
+        const expBarWidth = 400; // Match createHUD
+        this.expBar.width = expBarWidth * percent;
+        this.expText.setText(`${(percent * 100).toFixed(2)}%`);
     }
 }

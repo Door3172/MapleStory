@@ -7,7 +7,7 @@ export default class NetworkManager {
     }
 
     connect() {
-        this.socket = io('http://localhost:3000'); // Explicitly point to server port
+        this.socket = io('http://localhost:8080'); // Connect to correct server port
 
         this.setupSocketListeners();
     }

@@ -8,6 +8,7 @@ import DamageTextManager from '../ui/DamageTextManager';
 import UIManager from '../ui/UIManager';
 import MapBuilder from '../managers/MapBuilder';
 import NetworkManager from '../managers/NetworkManager';
+import CombatManager from '../managers/CombatManager';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
@@ -24,15 +25,19 @@ export default class GameScene extends Phaser.Scene {
         this.load.image('bg_sky', '/assets/backgrounds/sky.png');
         this.load.image('bg_hills', '/assets/backgrounds/hills.png');
         this.load.image('bg_trees', '/assets/backgrounds/trees.png');
+        this.load.image('bg_trees', '/assets/backgrounds/trees.png');
         this.load.image('ground_tile', '/assets/tilesets/ground.png');
+        this.load.image('hud_base', '/assets/ui/hud_base.png');
     }
 
     create() {
         // --- Network Manager ---
-        // Handles all socket connection and player updates
-        this.otherPlayers = {}; // Container for other players
+        this.otherPlayers = {};
         this.networkManager = new NetworkManager(this);
         this.networkManager.connect();
+
+        // --- Combat Manager ---
+        this.combatManager = new CombatManager(this);
 
         // --- PARALLAX BACKGROUNDS ---
         // 1. Sky (Static or very slow)
@@ -157,16 +162,19 @@ export default class GameScene extends Phaser.Scene {
 
             const dist = Phaser.Math.Distance.Between(px, py, loot.sprite.position.x, loot.sprite.position.y);
             if (dist <= pickupRange) {
-                // Picked up!
-                console.log(`Picked up ${loot.itemData.itemId} x${loot.itemData.amount}`);
+                // Trigger Magnet Effect
+                if (!loot.isMagnetized) {
+                    loot.magnetize(this.player.sprite);
+                }
 
-                // Add to inventory (TODO)
-
-                loot.destroy();
-                this.lootItems.splice(i, 1);
+                // If it's dead (collected), remove it
+                if (loot.isDead) {
+                    this.lootItems.splice(i, 1);
+                }
             }
         }
     }
+
 
     performAttack() {
         // Attack Animation (if available) - just toggle visibility or something
@@ -186,6 +194,7 @@ export default class GameScene extends Phaser.Scene {
         // Query Collision
         // Filter monsters around the hitbox
         const activeMonsters = this.spawnManager.getGroup().filter(m => m.sprite.active);
+        const targets = [];
 
         activeMonsters.forEach(monster => {
             const mx = monster.sprite.x;
@@ -193,14 +202,14 @@ export default class GameScene extends Phaser.Scene {
 
             // MatterJS query could be better, but simple rect check works for now
             if (Math.abs(mx - hitX) < attackRange / 2 + 20 && Math.abs(my - hitY) < attackHeight / 2 + 20) {
-                // HIT!
-                const dmg = Math.floor(Math.random() * 500) + 100;
-                const isCrit = Math.random() > 0.8;
-
-                monster.takeDamage(dmg);
-                this.damageManager.show(mx, my - 50, dmg, isCrit);
+                targets.push(monster);
             }
         });
+
+        // Delegate to CombatManager
+        if (targets.length > 0) {
+            this.combatManager.performAttack(this.player, targets, 'basic');
+        }
     }
 
     createMap() {

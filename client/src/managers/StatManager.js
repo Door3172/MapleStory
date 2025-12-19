@@ -73,8 +73,24 @@ export default class StatManager extends Phaser.Events.EventEmitter {
         return false;
     }
 
-    // Getters for UI
-    getExpPercent() {
-        return this.exp / this.maxExp;
+    // --- Combat Formulas (Pre-Big Bang Style) ---
+    getDamageRange() {
+        // Simple formula for Warrior-style:
+        // Max = ((STR * 4.0) + DEX) / 100 * WeaponAtt
+        // Min = ((STR * 0.9 * 4.0 * Mastery) + DEX) / 100 * WeaponAtt
+
+        // Mock Weapon Attack (Start with 15)
+        const weaponAtt = 15;
+        const mastery = 0.6; // 60% mastery
+
+        // Calculate Max
+        // Formula: MaxDamage = ((STR * 4.0) + DEX) * WeaponAttack / 100
+        const maxDmg = Math.floor(((this.str * 4.0) + this.dex) * weaponAtt / 100);
+
+        // Calculate Min
+        // Formula: MinDamage = ((STR * 0.9 * 4.0 * mastery) + DEX) * WeaponAttack / 100
+        const minDmg = Math.floor(((this.str * 3.6 * mastery) + this.dex) * weaponAtt / 100);
+
+        return { min: minDmg, max: maxDmg };
     }
 }
