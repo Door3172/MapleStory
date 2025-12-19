@@ -41,42 +41,37 @@ export default class GameScene extends Phaser.Scene {
 
         // --- PARALLAX BACKGROUNDS ---
         // 1. Sky (Static or very slow)
-        // Check game dimensions or use a large width
         const width = this.scale.width;
         const height = this.scale.height;
 
         this.bgSky = this.add.tileSprite(0, 0, width, height, 'bg_sky')
             .setOrigin(0, 0)
-            .setScrollFactor(0); // Static to camera
+            .setScrollFactor(0)
+            .setDepth(-20);
 
         // 2. Hills (Far background, slow scroll)
-        // Positioned lower, maybe?
-        this.bgHills = this.add.tileSprite(0, 0, width, height, 'bg_hills')
+        this.bgHills = this.add.tileSprite(0, 100, width * 1.5, height, 'bg_hills')
             .setOrigin(0, 0)
-            .setScrollFactor(0.2); // Moves at 20% speed
+            .setScrollFactor(0.15)
+            .setDepth(-15);
 
         // 3. Trees (Near background, medium scroll)
-        this.bgTrees = this.add.tileSprite(0, 0, width, height, 'bg_trees')
+        this.bgTrees = this.add.tileSprite(-100, 50, width * 1.2, height, 'bg_trees')
             .setOrigin(0, 0)
-            .setScrollFactor(0.5)
-            .setDepth(-5); // Behind player, in front of hills? 
-        // Actually, usually Sky < Hills < Map < Trees(Foreground)?
-        // Creating depth: Sky(-20) -> Hills(-15) -> Trees(-10) -> Map/Player(0)
+            .setScrollFactor(0.35)
+            .setDepth(-8);
 
-        this.bgSky.setDepth(-20);
-        this.bgHills.setDepth(-15);
-        this.bgTrees.setDepth(-10);
+        // Soft vignette to focus the playfield
+        const vignette = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.15)
+            .setScrollFactor(0)
+            .setDepth(50);
 
-        // Assets for easier debugging
-        // this.add.rectangle(0, 0, 2000, 1000, 0x87CEEB).setOrigin(0).setDepth(-10); // Sky REPLACED BY BG
-
-        this.createMap();
+        const { worldWidth, worldHeight } = this.createMap();
 
         // Player Setup
-        this.player = new Player(this, 100, 300);
-        // We set ropes after creating map, or pass them if available
-        if (this.rope) {
-            this.player.setRopes([this.rope]);
+        this.player = new Player(this, 240, 820);
+        if (this.ropes && this.ropes.length > 0) {
+            this.player.setRopes(this.ropes.map(r => r.sensor));
         }
 
         // Damage Text System
@@ -112,17 +107,19 @@ export default class GameScene extends Phaser.Scene {
         // this.input.keyboard.on('keydown-SHIFT', () => { ... });
 
         // Camera
-        this.cameras.main.setBounds(0, 0, 2000, 1000);
-        this.cameras.main.startFollow(this.player.sprite);
+        this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
+        this.cameras.main.startFollow(this.player.sprite, true, 0.08, 0.08);
+        this.cameras.main.setZoom(1.05);
 
         // --- COMBAT SYSTEM (Via SpawnManager) ---
         this.spawnManager = new SpawnManager(this);
         this.spawnManager.setSpawnPoints([
-            { x: 400, y: 300 },
-            { x: 600, y: 300 },
-            { x: 800, y: 300 },
-            { x: 1000, y: 300 },
-            { x: 1200, y: 300 }
+            { x: 420, y: 760 },
+            { x: 720, y: 760 },
+            { x: 1150, y: 560 },
+            { x: 1650, y: 880 },
+            { x: 2050, y: 720 },
+            { x: 2450, y: 520 }
         ]);
         this.spawnManager.setup();
 
@@ -140,6 +137,9 @@ export default class GameScene extends Phaser.Scene {
 
         // Input for Player movement
         this.cursors = this.input.keyboard.createCursorKeys();
+
+        // Decorative floating UI cues
+        this.createOverlayUI();
     }
 
     spawnLoot(x, y, itemData) {
@@ -213,39 +213,43 @@ export default class GameScene extends Phaser.Scene {
     }
 
     createMap() {
-        this.matter.world.setBounds(0, 0, 2000, 1000);
+        const worldWidth = 2800;
+        const worldHeight = 1200;
+        this.matter.world.setBounds(0, 0, worldWidth, worldHeight);
 
         // Initialize MapBuilder
         const mapBuilder = new MapBuilder(this);
 
-        // --- Heneysys Hunting Ground 1 Layout ---
+        // Base ground split into segments以呈現楓之谷狩獵場的落差感
+        mapBuilder.createPlatform(worldWidth / 2, 1020, worldWidth + 400);
+        mapBuilder.createPlatform(450, 880, 540);
+        mapBuilder.createPlatform(1250, 900, 680);
+        mapBuilder.createPlatform(2150, 860, 620);
 
-        // 1. Ground Floor (Main walk area)
-        // Two large sections with a gap? Or one continuous? 
-        // Let's do one main ground with some variation.
-        mapBuilder.createPlatform(1000, 950, 2000); // Main Ground at y=950, width 2000
+        // Mid platforms
+        mapBuilder.createPlatform(480, 720, 360);
+        mapBuilder.createPlatform(1050, 650, 320);
+        mapBuilder.createPlatform(1600, 720, 380);
+        mapBuilder.createPlatform(2200, 640, 420);
 
-        // 2. Layer 1 Platforms (Low)
-        mapBuilder.createPlatform(400, 750, 300);
-        mapBuilder.createPlatform(1400, 750, 300);
+        // Upper platforms
+        mapBuilder.createPlatform(760, 520, 260);
+        mapBuilder.createPlatform(1400, 480, 320);
+        mapBuilder.createPlatform(1900, 520, 260);
+        mapBuilder.createPlatform(2400, 440, 360);
 
-        // 3. Layer 2 Platforms (High)
-        mapBuilder.createPlatform(900, 550, 400);
+        // Ropes connecting the layers
+        this.ropes = [
+            mapBuilder.createRope(460, 800, 210),
+            mapBuilder.createRope(540, 620, 210),
+            mapBuilder.createRope(1120, 780, 300),
+            mapBuilder.createRope(1460, 600, 260),
+            mapBuilder.createRope(1920, 760, 320),
+            mapBuilder.createRope(2260, 580, 280),
+            mapBuilder.createRope(2560, 480, 320)
+        ];
 
-        // 4. Ropes (Connecting layers)
-        // Rope 1: Ground to Layer 1 (Left)
-        this.ropes = [];
-        this.ropes.push(this.matter.add.rectangle(400, 850, 20, 200, { isSensor: true, isStatic: true, label: 'rope' })); // y-center: 850 (950 to 750)
-
-        // Rope 2: Layer 1 (Left) to Layer 2
-        this.ropes.push(this.matter.add.rectangle(500, 650, 20, 200, { isSensor: true, isStatic: true, label: 'rope' }));
-
-        // Rope 3: Ground to Layer 1 (Right)
-        this.ropes.push(this.matter.add.rectangle(1400, 850, 20, 200, { isSensor: true, isStatic: true, label: 'rope' }));
-
-        if (this.player) {
-            this.player.setRopes(this.ropes);
-        }
+        return { worldWidth, worldHeight };
     }
 
     addOtherPlayer(playerId, playerInfo) {
@@ -305,5 +309,57 @@ export default class GameScene extends Phaser.Scene {
 
         // Loot Update
         this.lootItems.forEach(item => item.update());
+    }
+
+    createOverlayUI() {
+        const width = this.scale.width;
+        const height = this.scale.height;
+
+        const overlay = this.add.container(0, 0).setScrollFactor(0).setDepth(1200);
+
+        const mapPanel = this.add.rectangle(18, 14, 240, 70, 0x000000, 0.35)
+            .setOrigin(0, 0)
+            .setStrokeStyle(2, 0xffffff, 0.4);
+        const mapTitle = this.add.text(32, 26, '維多利亞島 - 弓手村外圍', {
+            fontSize: '16px',
+            fontStyle: 'bold',
+            fill: '#FFE9A3',
+            stroke: '#2d1800',
+            strokeThickness: 4
+        });
+
+        const channelInfo = this.add.text(32, 50, 'CH.1  |  微風午後', {
+            fontSize: '12px',
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2
+        });
+
+        const tipPanel = this.add.rectangle(width - 220, height - 150, 200, 90, 0x0d0f14, 0.5)
+            .setOrigin(0.5)
+            .setStrokeStyle(2, 0xffffff, 0.25);
+        const tipTitle = this.add.text(width - 310, height - 190, '遊戲提示', {
+            fontSize: '12px',
+            fontStyle: 'bold',
+            fill: '#7ed0ff',
+            stroke: '#00111e',
+            strokeThickness: 3
+        }).setOrigin(0, 0);
+        const tips = [
+            '← → 移動 | ↑ 跳躍 | ↓ 繩索',
+            'Z 普攻 / 撿取  •  X 施放技能',
+            '怪物掉落的楓幣會自動被吸附'
+        ];
+        tips.forEach((t, i) => {
+            const line = this.add.text(width - 410, height - 170 + i * 18, t, {
+                fontSize: '12px',
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 2
+            });
+            overlay.add(line);
+        });
+
+        overlay.add([mapPanel, mapTitle, channelInfo, tipPanel, tipTitle]);
     }
 }

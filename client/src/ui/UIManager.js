@@ -26,10 +26,18 @@ export default class UIManager {
         // hudBg.setDisplaySize(width, 100); // Standard height?
         this.container.add(hudBg);
 
+        const hudPlate = this.scene.add.rectangle(width / 2, height - 55, 520, 85, 0x0c0d10, 0.45)
+            .setOrigin(0.5)
+            .setStrokeStyle(2, 0xffffff, 0.2);
+        const hudHighlight = this.scene.add.rectangle(width / 2, height - 82, 520, 12, 0xffffff, 0.08)
+            .setOrigin(0.5);
+        this.container.add(hudPlate);
+        this.container.add(hudHighlight);
+
         // 2. Character Info (Left Side)
         // Avatar Placeholder (Square)
         // Position relative to HUD Bottom-Left (approx)
-        const leftBaseX = 20;
+        const leftBaseX = width / 2 - 240;
         const bottomY = height - 80;
 
         // Level (Gold/Yellow text)

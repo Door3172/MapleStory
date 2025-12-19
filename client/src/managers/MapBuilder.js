@@ -25,6 +25,22 @@ export default class MapBuilder {
         return { sprite: tileSprite, body: body };
     }
 
+    createRope(x, y, height) {
+        const ropeWidth = 14;
+
+        const ropeSensor = this.scene.matter.add.rectangle(x, y, ropeWidth, height, {
+            isSensor: true,
+            isStatic: true,
+            label: 'rope'
+        });
+
+        const rope = this.scene.add.rectangle(x, y, ropeWidth - 2, height, 0xd9c3a4, 0.9)
+            .setStrokeStyle(2, 0x7a5c34)
+            .setDepth(-2);
+
+        return { sensor: ropeSensor, visual: rope };
+    }
+
     // Helper to create multiple platforms from data
     buildMap(layoutData) {
         layoutData.forEach(p => {
