@@ -4,33 +4,50 @@ export default class OtherPlayer {
     constructor(scene, x, y, playerId) {
         this.scene = scene;
         this.playerId = playerId;
+        this.targetX = x;
+        this.targetY = y;
 
-        // Use the same sprite as the main player for now
-        this.sprite = scene.add.sprite(x, y, 'player');
-        this.sprite.setOrigin(0.5, 0.5);
+        // Visual Sprite (Matter sensor to avoid collisions)
+        this.sprite = scene.matter.add.sprite(x, y, 'player', null, {
+            isSensor: true,
+            isStatic: true,
+            label: 'otherPlayer'
+        });
 
-        // Add a label/name tag
-        this.nameText = scene.add.text(x, y - 40, `Player ${playerId.substr(0, 4)}`, {
+        // Name Tag
+        this.nameText = scene.add.text(x, y - 40, `User ${playerId.substr(0, 4)}`, {
             fontSize: '12px',
             fill: '#ffffff',
             stroke: '#000000',
-            strokeThickness: 2
+            strokeThickness: 3
         }).setOrigin(0.5);
-
-        // Physics?
-        // For other players, we usually don't run full physics on the client side to avoid desync/fighting.
-        // We just interpolate their position. 
-        // But for simplicity, we can just move the sprite directly.
     }
 
-    update(x, y, flipX) {
-        this.sprite.setPosition(x, y);
-        this.sprite.setFlipX(flipX);
-        this.nameText.setPosition(x, y - 40);
+    // Called when network update is received
+    updatePosition(playerInfo) {
+        this.targetX = playerInfo.x;
+        this.targetY = playerInfo.y;
+        this.sprite.setFlipX(playerInfo.flipX);
+    }
+
+    // Called every frame by GameScene update loop
+    update() {
+        if (this.sprite) {
+            // Linear Interpolation (Lerp) for smooth movement
+            // Factor 0.2 = fast smooth, 0.05 = slow smooth
+            const lerpFactor = 0.2;
+            const newX = Phaser.Math.Linear(this.sprite.x, this.targetX, lerpFactor);
+            const newY = Phaser.Math.Linear(this.sprite.y, this.targetY, lerpFactor);
+
+            this.sprite.setPosition(newX, newY);
+
+            // Sync nametag
+            this.nameText.setPosition(newX, newY - 40);
+        }
     }
 
     destroy() {
-        this.sprite.destroy();
-        this.nameText.destroy();
+        if (this.sprite) this.sprite.destroy();
+        if (this.nameText) this.nameText.destroy();
     }
 }

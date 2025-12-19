@@ -7,7 +7,7 @@ import OtherPlayer from '../objects/OtherPlayer';
 import DamageTextManager from '../ui/DamageTextManager';
 import UIManager from '../ui/UIManager';
 import MapBuilder from '../managers/MapBuilder';
-import io from 'socket.io-client';
+import NetworkManager from '../managers/NetworkManager';
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
@@ -28,37 +28,11 @@ export default class GameScene extends Phaser.Scene {
     }
 
     create() {
-        // Socket Setup
-        this.socket = io();
-        this.otherPlayers = {}; // Map of playerId -> OtherPlayer instance
-
-        // Socket Events
-        this.socket.on('currentPlayers', (players) => {
-            Object.keys(players).forEach((id) => {
-                if (id === this.socket.id) {
-                    // It's me
-                } else {
-                    this.addOtherPlayer(id, players[id]);
-                }
-            });
-        });
-
-        this.socket.on('newPlayer', (playerInfo) => {
-            this.addOtherPlayer(playerInfo.playerId, playerInfo);
-        });
-
-        this.socket.on('playerMoved', (playerInfo) => {
-            if (this.otherPlayers[playerInfo.playerId]) {
-                this.otherPlayers[playerInfo.playerId].update(playerInfo.x, playerInfo.y, playerInfo.flipX);
-            }
-        });
-
-        this.socket.on('disconnect', (playerId) => {
-            if (this.otherPlayers[playerId]) {
-                this.otherPlayers[playerId].destroy();
-                delete this.otherPlayers[playerId];
-            }
-        });
+        // --- Network Manager ---
+        // Handles all socket connection and player updates
+        this.otherPlayers = {}; // Container for other players
+        this.networkManager = new NetworkManager(this);
+        this.networkManager.connect();
 
         // --- PARALLAX BACKGROUNDS ---
         // 1. Sky (Static or very slow)
@@ -283,7 +257,7 @@ export default class GameScene extends Phaser.Scene {
             const flipX = this.player.sprite.flipX;
 
             if (this.player.oldPosition && (x !== this.player.oldPosition.x || y !== this.player.oldPosition.y || flipX !== this.player.oldPosition.flipX)) {
-                this.socket.emit('playerMovement', { x, y, flipX });
+                this.networkManager.emitPlayerMovement(x, y, flipX);
             }
 
             // Save old position
